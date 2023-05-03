@@ -1,0 +1,38 @@
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(openxlsx)
+
+data=data%>%separate(coordinates,c("Latitude","Longitude"),", ")
+options(digits=8)
+data$Latitude=round(as.numeric(data$Latitude),8)
+data$Longitude=round(as.numeric(data$Longitude),8)
+
+#data$wind=as.factor(data$wind)
+
+lagrange <- function(x0, y0) {
+  f <- function (x) {
+    sum(y0 * sapply(seq_along(x0), \(j) {
+      prod(x - x0[-j])/prod(x0[j] - x0[-j])
+    }))
+  }
+  Vectorize(f, "x")
+}
+
+Longnew=NULL;Latnew=NULL;n=100
+
+for(i in unique(data$wind)){
+  x=data$Latitude[data$wind==i];
+  y=data$Longitude[data$wind==i]
+  f=lagrange(x,y)
+  Latnew=c(Latnew,seq(min(x),max(x),length.out=n))
+  Longnew=c(Longnew,f(tail(Latnew,n)))
+}
+
+id=rep(1:5,each=n)
+speed=c(50+rexp(n,1/25),rnorm(n,40,20)+rnorm(n,50,10),rnorm(n,80,20),
+        50+rexp(n,1/45)+c(rep(0,n/2),rnorm(n/2,10,8)),
+        rgamma(n/2,80,30)+rnorm(n/2,60,25),rgamma(n/2,110,30)+rnorm(n/2,60,20))
+date=rep(1:5,each=n)
+datanew=cbind.data.frame(id,date,Latnew,Longnew,speed)
+
